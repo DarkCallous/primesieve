@@ -27,10 +27,15 @@ fn main() {
     println!("计数器获取质数总数: {}", sum);
     let primes_vec: Vec<Vec<(usize, u8)>> = 
         gen_prime_collection(&mask_vec);
+    let half = primes_vec.len() / 2;
+    let mut primes_vec_collected = Vec::with_capacity(sum);
+    for v in &primes_vec[..=half] {
+        primes_vec_collected.extend_from_slice(v);
+    }
     let duration = start.elapsed();
     println!("阶段四累计耗时: {:?}", duration);
-    println!("收集器获取集合总数: {}", primes_vec.len());
-    let verify_goldbach_result = verify_goldbach(target, &mask_vec, &primes_vec);
+    println!("收集器获取集合总数: {}", primes_vec_collected.len());
+    let verify_goldbach_result = verify_goldbach(target, &mask_vec, &primes_vec_collected);
     let duration = start.elapsed();
     println!("阶段五累计耗时: {:?}", duration);
     println!("验证结果: {}", verify_goldbach_result);
@@ -75,7 +80,7 @@ fn gen_base_primes(num: usize) -> Vec<(usize, u8)>{
 }
 
 fn is_prime(num: usize, masks: &[BitsetU64Wheel30]) -> bool{
-    //不需要判3/5，因为L + R(L < R)，所以R不可能是3/5，而该式仅用于L
+    //不需要判3/5，因为L + R(L < R)，所以R不可能是3/5，而该函数仅用于R
     let wheel = num / 30;
     let modx = num - wheel * 30;
     let id = REV_WHEEL[modx];
@@ -86,24 +91,30 @@ fn is_prime(num: usize, masks: &[BitsetU64Wheel30]) -> bool{
     return !masks[storage].is_marked(wheel, id as u8);
 }
 
-fn verify_goldbach_single(num: usize, masks: &[BitsetU64Wheel30], primes: &[Vec<(usize, u8)>]) -> bool{
+fn verify_goldbach_single(num: usize, masks: &[BitsetU64Wheel30], primes: &[(usize, u8)]) -> bool{
     if is_prime(num - 3, masks){
         return true;
     }
     if is_prime(num - 5, masks){
         return true;
     }
-    let primes_iter = 
-        primes
-            .iter()
-            .flat_map(|primes| primes.iter());
-    primes_iter
+    primes.iter()
         .map(|&(prime_wheel, prime_id)| prime_wheel * 30 + prime_id as usize)
         .map(|prime| num - prime)
         .any(|diff| is_prime(diff, masks)) 
 }
 
-fn verify_goldbach(num: usize, masks: &[BitsetU64Wheel30], primes: &[Vec<(usize, u8)>]) -> bool{
+fn is_prime_pre(num: (usize, u8), masks: &[BitsetU64Wheel30]) -> bool{
+    let (wheel, id) = num;
+    let storage = (wheel >> 3) / CACHE_SIZE;
+    return !masks[storage].is_marked(wheel, id as u8);
+}
+
+fn verify_goldbach_single_pre(num: (usize, u8), masks: &[BitsetU64Wheel30], primes: &[(usize, u8)]) -> bool{
+    true
+}
+
+fn verify_goldbach(num: usize, masks: &[BitsetU64Wheel30], primes: &[(usize, u8)]) -> bool{
     let max_index = (num - 8) / 2 + 1;
     (0..max_index)
         .into_par_iter()
