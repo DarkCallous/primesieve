@@ -1,4 +1,4 @@
-pub use crate::wheel_tables::*;
+﻿pub use crate::wheel_tables::*;
 
 pub struct BitsetU64Wheel30 {
     start: usize,
@@ -15,6 +15,7 @@ impl BitsetU64Wheel30 {
         }
     }
 
+    #[inline(always)]
     pub fn piece(start_uwheel: usize, end_uwheel: usize) -> BitsetU64Wheel30 {
         BitsetU64Wheel30 {
             start: start_uwheel,
@@ -23,6 +24,7 @@ impl BitsetU64Wheel30 {
         }
     }
 
+    #[inline(always)]
     pub fn is_marked(&self, wheel: usize, id: u8) -> bool {
         let pos = wheel >> 3;
         let in_pos = wheel & 0b111;
@@ -31,6 +33,7 @@ impl BitsetU64Wheel30 {
         word & (1 << bit_idx) != 0
     }
 
+    #[inline(always)]
     pub fn mark(&mut self, wheel: usize, id: u8) {
         let pos = wheel >> 3;
         let in_pos = wheel & 0b111;
@@ -38,6 +41,7 @@ impl BitsetU64Wheel30 {
         unsafe { *self.mask.get_unchecked_mut(pos - self.start) |= 1 << bit_idx };
     }
 
+    #[inline(always)]
     pub fn mul((wheel_a, id_a): (usize, u8), (wheel_b, id_b): (usize, u8)) -> (usize, u8) {
         let (add_wheel, new_id) = MUL30_TABLE[id_a as usize][id_b as usize];
         let new_wheel = 30 * wheel_a * wheel_b
@@ -47,16 +51,24 @@ impl BitsetU64Wheel30 {
         (new_wheel, new_id)
     }
 
+    #[inline(always)]
     pub fn start_wheel(&self) -> usize {
         self.start << 3
     }
 
+    #[inline(always)]
     pub fn end_wheel(&self) -> usize {
         (self.end << 3) - 1
     }
 
+    #[inline(always)]
     pub fn prime_counts(&self) -> usize {
         self.mask.iter().map(|i| i.count_zeros() as usize).sum()
+    }
+
+    #[inline(always)]
+    pub fn words(&self) -> &[u64] {
+        &self.mask
     }
 
     pub fn collect_primes(&self) -> Vec<(usize, u8)> {
